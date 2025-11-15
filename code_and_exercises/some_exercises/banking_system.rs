@@ -9,11 +9,17 @@ struct Account{
 
 impl Account{
     fn withdraw(&mut self, amount:f64){
+        if amount<=0.0{
+            return;
+        }
         self.balance-= amount;
         
     }
 
     fn deposit(&mut self, amount:f64){
+        if amount<0.0{
+            return;
+        }
         self.balance+=amount;
     }
     fn balance(&self)->f64{
@@ -34,14 +40,14 @@ impl Bank{
         };
         self.accounts.insert(account_no, user);
 
-        println!("Account created successfull...");
+        println!("Account created successfully...");
         println!("Account number: {} and Customer Name: {}", account_no, name);
     }
 
     
     fn withdraw_money(&mut self, account_no: u32, amount: f64){
         if let Some(acc)= self.accounts.get_mut(&account_no){
-            if amount<=acc.balance() {
+            if acc.balance()-amount>=0.0 {
                 acc.withdraw(amount);
             
                 println!("Successfully withdrawed money: {}", amount);
@@ -88,11 +94,30 @@ impl Bank{
         if self.accounts.is_empty(){
             println!("No accounts in the bank !!");
         }
-
-        for (account_no, acc) in &self.accounts{
-            println!("Account No.: {}, Name: {}, Balance: {}", account_no, acc.name, acc.balance);
+        else{
+            for (account_no, acc) in &self.accounts{
+                println!("Account No.: {}, Name: {}, Balance: {}", account_no, acc.name, acc.balance);
+            }
         }
+
+        
     }
+}
+
+fn read_u32(user_input: String)-> Option<u32>{
+
+    return match user_input.trim().parse::<u32>(){
+        Ok(val)=> Some(val),
+        Err(_)=> None
+    };
+    
+}
+
+fn read_f64(user_input: String)-> Option<f64>{
+    return match user_input.trim().parse::<f64>(){
+        Ok(val)=> Some(val),
+        Err(_)=> None
+    };
 }
 
 
@@ -113,69 +138,147 @@ fn main() {
         println!("Press 6: Show all accounts");
 
         let mut user_choice= String::new();
-        io::stdin().read_line(&mut user_choice).expect("Faile to read line");
-        let user_choice= user_choice.trim();
+        if let Err(_)= io::stdin().read_line(&mut user_choice){
+            println!("Input taking error !!");
+            continue;
+        }
+        let user_choice= match read_u32(user_choice){
+            Some(val)=> val,
+            None=> {
+                println!("Wrong User Input !!");
+                continue;
+            }
+        }
         
 
         match user_choice{
-            "0" => break,
-            "1" => {
+            0 => break,
+            1 => {
             
             println!("Enter the user name: ");
             let mut user_name= String::new();
-            io::stdin().read_line(&mut user_name).expect("Failed to read line");
+            if let Err(_)= io::stdin().read_line(&mut user_name){
+                println!("Input taking error !!");
+                continue;
+            }
             let user_name= user_name.trim();
             bank.create_account(account_serial, user_name.to_string());
             account_serial+=1;
             },
             
-            "2"=> {
+            2 => {
                 println!("Enter the user account number: ");
                 let mut account_number= String::new();
-                io::stdin().read_line(&mut account_number).expect("Failed to read line");
-                let account_number: u32= account_number.trim().parse().expect("Failed to parse the account_number");
+                if let Err(_)= io::stdin().read_line(&mut account_number){
+                    println!("Input taking error...");
+                    continue;
+                }
+                let account_number: u32= match read_u32(account_number){
+                    Some(val)=> val, 
+                    None => {
+                        println!("Wrong User Input !!");
+                        continue;
+                    }
+                };
                 
                 println!("Enter the amount to withdraw: ");
                 let mut amount= String::new();
-                io::stdin().read_line(&mut amount).expect("Failed to read line");
-                let amount: f64= amount.trim().parse().expect("Failed to parse the amount");
+                if let Err(_)= io::stdin().read_line(&mut amount){
+                    println!("Wrong User Input...");
+                    continue;
+                }
+                let amount: f64= match read_f64(amount) {
+                    Some(val) => val,
+                    None=> {
+                        println!("Wrong User Input !!");
+                        continue;
+                    }
+                };
 
-                bank.withdraw_money(account_number, amount);
+                if amount>=0.0 {
+                    bank.withdraw_money(account_number, amount);
+                }
+                else {
+                    println!("Invalid amount entered. Please check !!");
+                }
+                
             },
 
-            "3" => {
+            3 => {
                 println!("Enter the account number: ");
                 let mut account_number= String::new();
-                io::stdin().read_line(&mut account_number).expect("Failed to read line");
-                let account_number: u32= account_number.trim().parse().expect("Failed to parse the account_number");
+                if let Err(_)= io::stdin().read_line(&mut account_number){
+                    println!("Input taking error...");
+                    continue;
+                }
+                let account_number: u32= match read_u32(account_number){
+                    Some(val)=> val,
+                    None=> {
+                        println!("Wrong User Input !!");
+                        continue;
+                    }
+                };
 
                 bank.check_balance(account_number);
             },
             
-            "4" => {
+            4 => {
                 println!("Enter the account number: ");
                 let mut account_number= String::new();
-                io::stdin().read_line(&mut account_number).expect("Failed to read line");
-                let account_number: u32= account_number.trim().parse().expect("Failed to parse the account_number");
+                if let Err(_)= io::stdin().read_line(&mut account_number){
+                    println!("Input taking error...");
+                    continue;
+
+                }
+                let account_number: u32= match read_u32(account_number){
+                    Some(val)=> val,
+                    None=> {
+                        println!("Wrong User Input !!");
+                        continue;
+                    }
+                };
                 
                 println!("Enter the amount: ");
                 let mut amount= String::new();
-                io::stdin().read_line(&mut amount).expect("Failed to read line");
-                let amount: f64= amount.trim().parse().expect("Failed to parse the amount");
+                if let Err(_)= io::stdin().read_line(&mut amount){
+                    println!("Wrong User Input...");
+                    continue;
+                }
+                let amount: f64= match read_f64(amount){
+                    Some(val)=> val,
+                    None=> {
+                        println!("Wrong User Input !!");
+                        continue;
+                    }
+                };
 
-                bank.add_money(account_number, amount);
+                if amount<0.0 {
+                    println!("Amount is not valid !!");
+                }
+                else{
+                    bank.add_money(account_number, amount);
+                }
             }
             
-            "5" => {
+            5 => {
                 println!("Enter the account number: ");
                 let mut account_number= String::new();
-                io::stdin().read_line(&mut account_number).expect("Failed to read line");
-                let account_number: u32= account_number.trim().parse().expect("Failed to parse the account_number");
+                if let Err(_)= io::stdin().read_line(&mut account_number){
+                    println!("Input taking error...");
+                    continue;
+                }
+                let account_number: u32= match read_u32(account_number){
+                    Some(val)=> val,
+                    None => {
+                        println!("Wrong User Input !!");
+                        continue;
+                    }
+                };
                 
                 bank.delete_account(account_number);
             }
 
-            "6" => {
+            6 => {
                 println!("Displaying all the bank accounts !!");
                 bank.display_all_accounts();
             }
