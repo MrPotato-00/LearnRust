@@ -1,6 +1,11 @@
 use std::collections::HashMap;
 use std::io;
+use std::fs::File;
+use std::io::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Account{
     account_number: u32,
     name: String,
@@ -27,21 +32,32 @@ impl Account{
     }
 }
 
+
+#[derive(Serialize, Deserialize)]
 struct Bank{
-    accounts: HashMap<u32, Account>
+    accounts: HashMap<u32, Account>,
+    next_account_number: u32
 }
 
 impl Bank{
-    fn create_account(&mut self, account_no:u32, name: String){
+    fn new()->Self{
+        Bank{
+            accounts: HashMap::new(),
+            next_account_number: 1,
+        }
+    }
+
+    fn create_account(&mut self, name: String){
+        let account_number= self.next_account_number;
         let user= Account{
-            account_number: account_no,
+            account_number: account_number,
             name: name.clone(),
             balance: 0.0
         };
-        self.accounts.insert(account_no, user);
-
+        self.accounts.insert(account_number, user);
+        self.next_account_number+=1;
         println!("Account created successfully...");
-        println!("Account number: {} and Customer Name: {}", account_no, name);
+        println!("Account number: {} and Customer Name: {}",account_number,  name);
     }
 
     
@@ -62,7 +78,7 @@ impl Bank{
     }
     
     fn delete_account(&mut self, account_no: u32){
-        if let Some(_acc)= self.accounts.get(&account_no){
+        if self.accounts.contains_key(&account_no){
             self.accounts.remove(&account_no);
             println!("Removed the account number: {}", account_no);
         }
@@ -102,8 +118,40 @@ impl Bank{
 
         
     }
+
+    fn save_to_file(&self, filename: &str)->io::Result<()>{
+        let serialized= serde_json::to_string_pretty(self)?;
+        let mut file= File::create(filename)?;
+
+        file.write_all(serialized.as_bytes())?;
+        println!("Data saved to {}", filename);
+        return Ok(());
+    }
+
+    fn load_from_file(filename: &str)->io::Result<Self>{
+        if !Path::new(filename).exists(){
+            println!("No existing data file found. Starting with fresh bank");
+            return Ok(Bank::new());
+        }
+
+        let mut file= File::open(filename);
+        let mut contents= String::new();
+        file?.read_to_string(&mut contents)?;
+
+        let bank: Bank= serde_json::from_str(&contents)?;
+        println!("Data loaded from {}", filename);
+        return Ok(bank);
+    }
+}
+// apply generic here
+fn read_value<T: std::str::FromStr>(user_input: String)->Option<T>{
+    return match user_input.trim().parse::<T>(){
+        Ok(val)=> Some(val),
+        Err(_)=> None
+    };
 }
 
+/*
 fn read_u32(user_input: String)-> Option<u32>{
 
     return match user_input.trim().parse::<u32>(){
@@ -119,13 +167,20 @@ fn read_f64(user_input: String)-> Option<f64>{
         Err(_)=> None
     };
 }
-
+*/
 
 fn main() {
-    let mut bank= Bank{
-        accounts: HashMap::new()
+    
+    const DATA_FILE: &str= "bank_data.json";
+
+    let mut bank= match Bank::load_from_file(DATA_FILE){
+        Ok(bank) => bank,
+        Err(e) => {
+            println!("Error loading data: {}. Starting with fresh bank.", e);
+            Bank::new()
+        }
     };
-    let mut account_serial= 1;
+
     loop{
         println!("\n=========== Welcome to the Bank System !! ============\n");
         
@@ -142,28 +197,28 @@ fn main() {
             println!("Input taking error !!");
             continue;
         }
-        let user_choice= match read_u32(user_choice){
+        let user_choice:u32= match read_value::<u32>(user_choice){
             Some(val)=> val,
             None=> {
                 println!("Wrong User Input !!");
                 continue;
             }
-        }
+        };
         
 
         match user_choice{
             0 => break,
             1 => {
             
-            println!("Enter the user name: ");
-            let mut user_name= String::new();
-            if let Err(_)= io::stdin().read_line(&mut user_name){
-                println!("Input taking error !!");
-                continue;
-            }
-            let user_name= user_name.trim();
-            bank.create_account(account_serial, user_name.to_string());
-            account_serial+=1;
+                println!("Enter the user name: ");
+                let mut user_name= String::new();
+                if let Err(_)= io::stdin().read_line(&mut user_name){
+                    println!("Input taking error !!");
+                    continue;
+                }
+                let user_name= user_name.trim().to_string();
+                bank.create_account(user_name);
+                
             },
             
             2 => {
@@ -173,7 +228,7 @@ fn main() {
                     println!("Input taking error...");
                     continue;
                 }
-                let account_number: u32= match read_u32(account_number){
+                let account_number: u32= match read_value::<u32>(account_number){
                     Some(val)=> val, 
                     None => {
                         println!("Wrong User Input !!");
@@ -187,7 +242,7 @@ fn main() {
                     println!("Wrong User Input...");
                     continue;
                 }
-                let amount: f64= match read_f64(amount) {
+                let amount: f64= match read_value::<f64>(amount) {
                     Some(val) => val,
                     None=> {
                         println!("Wrong User Input !!");
@@ -211,7 +266,7 @@ fn main() {
                     println!("Input taking error...");
                     continue;
                 }
-                let account_number: u32= match read_u32(account_number){
+                let account_number: u32= match read_value::<u32>(account_number){
                     Some(val)=> val,
                     None=> {
                         println!("Wrong User Input !!");
@@ -230,7 +285,7 @@ fn main() {
                     continue;
 
                 }
-                let account_number: u32= match read_u32(account_number){
+                let account_number: u32= match read_value::<u32>(account_number){
                     Some(val)=> val,
                     None=> {
                         println!("Wrong User Input !!");
@@ -244,7 +299,7 @@ fn main() {
                     println!("Wrong User Input...");
                     continue;
                 }
-                let amount: f64= match read_f64(amount){
+                let amount: f64= match read_value::<f64>(amount){
                     Some(val)=> val,
                     None=> {
                         println!("Wrong User Input !!");
@@ -267,7 +322,7 @@ fn main() {
                     println!("Input taking error...");
                     continue;
                 }
-                let account_number: u32= match read_u32(account_number){
+                let account_number: u32= match read_value::<u32>(account_number){
                     Some(val)=> val,
                     None => {
                         println!("Wrong User Input !!");
@@ -285,7 +340,15 @@ fn main() {
 
             _ => println!("Not a valid operation !!"),
         };
+
+        if let Err(e)= bank.save_to_file(DATA_FILE){
+            println!("Warning: Could not save data: {}", e);
+        }
         
+    }
+
+    if let Err(e)= bank.save_to_file(DATA_FILE){
+        println!("Warning: Could not save data: {}", e);
     }
 
     println!("\nClosing Bank. See you soon...");
