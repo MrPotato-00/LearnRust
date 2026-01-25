@@ -1,17 +1,3 @@
-/*
-To do: {
-
-Single-threaded, blocking downloader
-- [ ]  M1- Single-threaded, blocking downloader
-- CLI that takes a URL and saves to disk.
-- Use reqwest::blocking or ureq.
-- Show bytes download and total bytes if Content-Length present.
-}
-1. Build the request parser using reqwest..
-2. Use cli to take the url..
-
-*/
-
 use clap::Parser;
 use std::fs::File;
 use std::io::{self, copy};
@@ -32,22 +18,39 @@ mentioning the error return type, since the Result takes up two arguments <T, E>
 error is of two types File::io::Error and reqwest. 
 
 */
-fn download_file(url: String, file_path: &str) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let mut response = reqwest::blocking::get(url)?;
+fn download_file(url: String) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let mut response = reqwest::blocking::get(url.clone())?;
+    
+    let file_path= match get_filename(url.clone()){
+        Ok(filename)=> filename,
+        Err(e)=> return Err(e.into())
+    };
+    if let Some(length)= response.content_length(){
+        println!("Content Length is: {:.2} MB", (length as f64)/(1024.0*1024.0));
+    }
+    else{
+        print!("Content-Length header is missing !!");
+    }
     let mut dest = File::create(file_path)?;
     copy(&mut response, &mut dest)?;
     Ok(())
 }
+
+fn get_filename(url: String)->Result<String, String>{
+    let filename= url.split('/').last();
+    match filename{
+        Some(val)=>Ok(val.to_string()),
+        _=>Err("Failed to extract filename".to_string())
+    }
+}
+
 fn main() {
     let cli= Cli::parse();
-    //println!("Url: {}", cli.url);
 
-    //let client = reqwest::blocking::Client::new();
-    //let url_parser = client.get(cli.url).send();
-    //let url_parser= reqwest::blocking::get(cli.url);
-    match download_file(cli.url, "./file.png"){
+    match download_file(cli.url){
         Ok(_)=> println!("File downloaded successfully..."),
         Err(e)=> println!("{}",e)
     };
-     
+
+    
 }
